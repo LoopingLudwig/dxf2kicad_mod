@@ -10,7 +10,7 @@ global body_end
 global fp_poly_head
 global fp_poly_end
 
-debug = 0
+debug = False
 distance_error = 1e-2
 body_head = "\n\
 (module dxfgeneratedcopper (layer F.Cu) (tedit 0) \n\
@@ -33,18 +33,18 @@ fp_poly_end_2 = " ) (width 0.001)) "
 def	get_start_end_pts(entity):
 	if "LINE" == entity.dxftype:
 		if debug:
-			print  >>sys.stderr,"LINE ", entity.start, entity.end
+			print("LINE ", entity.start, entity.end, file=sys.stderr)
 		return (entity.start,entity.end)
 	elif "ARC" == entity.dxftype:
-		start = ( entity.center[0] + entity.radius * math.cos(entity.startangle/180*math.pi), \
-			entity.center[1] + entity.radius * math.sin(entity.startangle/180*math.pi), 0)
-		end = ( entity.center[0] + entity.radius * math.cos(entity.endangle/180*math.pi), \
-			entity.center[1] + entity.radius * math.sin(entity.endangle/180*math.pi), 0)
+		start = ( entity.center[0] + entity.radius * math.cos(entity.start_angle/180*math.pi), \
+			entity.center[1] + entity.radius * math.sin(entity.start_angle/180*math.pi), 0)
+		end = ( entity.center[0] + entity.radius * math.cos(entity.end_angle/180*math.pi), \
+			entity.center[1] + entity.radius * math.sin(entity.end_angle/180*math.pi), 0)
 		if debug:
-			print  >>sys.stderr,"ARC ", start, end
+			print("ARC ", start, end, file=sys.stderr)
 		return (start,end)
 	else:
-		print >>sys.stderr, "[Error]: Unexpceted dxftype ",  entity.dxftype 
+		print("[Error]: Unexpceted dxftype ",  entity.dxftype, file=sys.stderr) 
 		
 		
 def print_points(ety,direction):
@@ -54,28 +54,28 @@ def print_points(ety,direction):
 		points = [ety.start,ety.end]
 	elif 'ARC' == ety.dxftype:
 		step = 1.0/ety.radius
-		angle = ety.startangle
+		angle = ety.start_angle
 		
 		if debug:
-			print >>sys.stderr,"angle", ety.startangle, ety.endangle
+			print("angle", ety.start_angle, ety.end_angle, file=sys.stderr)
 		
-		if (ety.startangle > ety.endangle):
-			ety.endangle += 360
+		if (ety.start_angle > ety.end_angle):
+			ety.end_angle += 360
 		while (1):
 			points.append( (ety.center[0] + ety.radius * math.cos(angle/180*math.pi), \
 			ety.center[1] + ety.radius * math.sin(angle/180*math.pi)))
 			angle +=  step
 			
-			if (angle > ety.endangle):
+			if (angle > ety.end_angle):
 				break
 	else:
-		print "[Error]: Unexpceted dxftype ",  entity.dxftype
+		print("[Error]: Unexpceted dxftype ",  entity.dxftype)
 
 	if direction == -1:
 		points.reverse()
 	
 	for point in points:
-		print "(xy ", point[0]," ", -point[1],")" #in KiCad Y axis has opposite direction
+		print("(xy ", point[0]," ", -point[1],")") #in KiCad Y axis has opposite direction
 	
 
 def start_new_shape():
@@ -87,30 +87,30 @@ def start_new_shape():
 		pts_next =points[1];
 		
 		if debug:
-			print >>sys.stderr,"starting point",point_to_close
-		print fp_poly_head
+			print("starting point",point_to_close, file=sys.stderr)
+		print(fp_poly_head)
 		print_points(current_shape,1)
 	
 #dxf = dxfgrabber.readfile("test4-R2000-2002.dxf")
 dxf = dxfgrabber.readfile(sys.argv[1])
 
 if debug:
-	print >>sys.stderr,"DXF version: {}", dxf.dxfversion
+	print("DXF version: {}", dxf.dxfversion, file=sys.stderr)
 header_var_count = len(dxf.header) # dict of dxf header vars
 layer_count = len(dxf.layers) # collection of layer definitions
 block_definition_count = len(dxf.blocks) #  dict like collection of block definitions
 entity_count = len(dxf.entities) # list like collection of entities
 if debug:
-	print >>sys.stderr,"Entity Count:"
-	print >>sys.stderr,entity_count
+	print("Entity Count:", file=sys.stderr)
+	print(entity_count, file=sys.stderr)
 
 layers = set([entity.layer for entity in dxf.entities])
 if debug:
-	print >>sys.stderr,layers
+	print(layers, file=sys.stderr)
 
 
 
-print body_head
+print(body_head)
 
 
 for layer in layers:
@@ -123,18 +123,18 @@ for layer in layers:
 	start_new_shape()
 
 	if debug :
-		print >>sys.stderr,"Not Processed Shape: ", len(not_processed_data)
+		print("Not Processed Shape: ", len(not_processed_data), file=sys.stderr)
 
 	while (1):
 
 		if pts_next == None:
 			if debug:
-				print >>sys.stderr, "pts_next is None"
+				print("pts_next is None", file=sys.stderr)
 			break #stop 
 		pts = pts_next
 		
 		if debug:
-			print >>sys.stderr,"Searching entity which is connected with ", pts
+			print("Searching entity which is connected with ", pts, file=sys.stderr)
 		#get_start_end_pts(current_shape)
 		matched_entity = None
 		pts_next = None
@@ -148,7 +148,7 @@ for layer in layers:
 				direction = 1 #from start to end
 				pts_next = points[1]
 				if debug:
-					print >>sys.stderr,"Got the Point", x, y
+					print("Got the Point", x, y, file=sys.stderr)
 				break;
 			x = points[1][0]
 			y = points[1][1]
@@ -158,41 +158,41 @@ for layer in layers:
 				direction = -1 #from end to start
 				pts_next = points[0]
 				if debug:
-					print >>sys.stderr,"Got the Point", x, y
+					print("Got the Point", x, y, file=sys.stderr)
 				break;
 				
 		
 		if matched_entity == None:
 			
 			if debug:
-				print >>sys.stderr,"No matching found, check if we could close the loop"
+				print("No matching found, check if we could close the loop", file=sys.stderr)
 				
 			if (math.fabs(point_to_close[0]-pts[0]) < distance_error) and \
 				(math.fabs(point_to_close[1]-pts[1]) < distance_error):
 				if debug:
-					print >>sys.stderr,"shape closed at", pts
-				print "(xy ", pts[0]," ", -pts[1],")" 
-				print fp_poly_end_1, layer, fp_poly_end_2
+					print("shape closed at", pts, file=sys.stderr)
+				print("(xy ", pts[0]," ", -pts[1],")") 
+				print(fp_poly_end_1, layer, fp_poly_end_2)
 						
 				#find next shape
 				start_new_shape()
 					
 				if debug :
-					print >>sys.stderr,"Not Processed Shape: ", len(not_processed_data)
+					print("Not Processed Shape: ", len(not_processed_data), file=sys.stderr)
 			else:
-				print >>sys.stderr, "[Error] unconnected Point:",pts ," on layer", layer
-				print >>sys.stderr, "        there may be overlapped lines or arcs or unclosed shape, please double check the dxf file"
+				print("[Error] unconnected Point:",pts ," on layer", layer, file=sys.stderr)
+				print("        there may be overlapped lines or arcs or unclosed shape, please double check the dxf file", file=sys.stderr)
 				
 				break;
 		else:
 			if debug:
-				print >>sys.stderr, "now print the line on,", matched_entity
+				print("now print the line on,", matched_entity, file=sys.stderr)
 			print_points(matched_entity,direction)
 			if debug:
-				print >>sys.stderr, "removed from the set,", matched_entity
+				print("removed from the set,", matched_entity, file=sys.stderr)
 			not_processed_data.remove(matched_entity) #remove from the set
 			
 			if debug :
-				print  >>sys.stderr,"Not Processed Shape: ", len(not_processed_data)
+				print("Not Processed Shape: ", len(not_processed_data), file=sys.stderr)
 				
-print body_end
+print(body_end)
